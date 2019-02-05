@@ -1,0 +1,166 @@
+---
+title: "Bayesian variable selection with logistic prior inclusion probability"
+author: "Yifan Zhou"
+date: "12/1/2018"
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=5, echo=TRUE, warning=FALSE, message=FALSE, comment = NA, fig.align = 'center')
+```
+
+## Model setup
+
+Suppose there are _P_ enhancers (or ATAC-seq peaks) in the vicinity of a gene of interest _G_.    
+Let $x_j$ be chromatin accessibility of enhancer _j_ and $\beta_j$ be its effect on gene _G_, let _y_ be the expression or promoter activity of gene _G_. We have:
+$$y=\sum_{j=1}^P \beta_j x_j + \epsilon , \hspace{10mm} \epsilon \sim N(0,\sigma^2_e)$$
+where $\beta_j \sim f(A_j)$, $A_j$ here are features in enhancer _j_ (_e.g._ Hi-C contact with gene promoter, TF footprint strength, ...).   
+One choice is a spike-and-slab prior on $\beta_j$ with logistic inclusion probability:
+$$\beta_j \sim \pi_j N(0,\sigma^2_{\beta}) + (1-\pi_j)\delta_j , \hspace{10mm} \text{log }\frac{\pi_j}{1-\pi_j}=\alpha A_j$$
+If we introduce $\gamma_j$ as a latent indicator variable that takes on the value 1 when $\beta_j$ is non-zero, and 0 when $\beta_j$ is zero, then the prior model is equivalent to:
+$$\beta_j | \gamma_j=0 \sim \delta_0, \hspace{5mm}  \beta_j | \gamma_j=1 \sim N(0,\sigma^2_{\beta}), $$
+$$\text{and}  \hspace{5mm}  \text{log }\frac{p(\gamma_j=1)}{p(\gamma_j=0)}=\alpha A_j .$$
+Suppose the sample size is _N_, the joint probability density function is:
+$$
+\begin{align*}
+&\text{P}(\boldsymbol y, \boldsymbol \beta, \boldsymbol\gamma, \alpha | \boldsymbol X, \boldsymbol A, \sigma^2_e, \sigma^2_{\beta} )\\ 
+&= \prod_{i=1}^N \text{P}(y_i|X_{i\cdot},\boldsymbol \beta,\sigma^2_e) \prod_{j=1}^P \text{P}(\beta_j|\gamma_j,\sigma^2_{\beta}) \prod_{j=1}^P \text{P}(\gamma_j|\alpha,A_j)\\
+&= \prod_{i=1}^N N(y_i;\sum_{j=1}^P \beta_j x_{ij},\sigma^2_e) \prod_{j=1}^P [N(\beta_j;0,\sigma^2_{\beta})^{\gamma_j } \delta_0(\beta_j)^{1-\gamma_j}] \prod_{j=1}^P (1+e^{-\alpha A_j})^{-\gamma_j}(1+e^{\alpha A_j})^{\gamma_j-1}
+\end{align*}
+$$
+
+## Gibbs sampling algorithm
+
+We sample each of the parameters based on their posterior distributions:
+
+* Sample $\boldsymbol \gamma, \boldsymbol \beta$ given $\boldsymbol y, \boldsymbol X, \alpha, \boldsymbol A, \sigma^2_e, \sigma^2_{\beta}$ :   
+For $j=1,2, ... ,P$:    
+First, sample $\gamma_j$ according to: 
+$$\frac{p(\gamma_j=1|\cdot)}{p(\gamma_j=0|\cdot)} =\sqrt{\frac{\lambda}{\sigma^2_{\beta}}} \text{ exp}\Bigl(\frac{\nu^2}{2\lambda}\Bigr) \text{ exp}(\alpha A_j).$$
+Next, if $\gamma_j=1$, sample $\beta_j \sim N(\nu, \lambda)$; otherwise, $\beta_j=0$.   
+Here, $\nu = \lambda \cdot \frac{1}{\sigma^2_e} \sum_{i=1}^N x_{ij}(y_i-\sum_{k\neq j}x_{ik}\beta_k)$,
+$\lambda = \Bigl(\frac{\sum_{i=1}^N x_{ij}^2}{\sigma^2_e}+\frac{1}{\sigma^2_{\beta}}\Bigr)^{-1}$.
+
+* Sample $\sigma^2_e$
+
+* Sample $\sigma^2_{\beta}$
+
+* Update $\alpha$
+
+## Compare the Bayesian variable selection (BVS) method with Elastic Net (EN)
+
+Comparison was done between the BVS and EN method across a series of $\sigma^2_{\beta}$ values, which reflect the magnitude of non-zero $\beta$, or the signal level. The criteria include precison and recall rates averaged over a number of repeated trials.
+
+Load required packages:
+```{r}
+library(pscl)
+library(mvtnorm)
+library(VennDiagram)
+```
+
+Load BVS and Elastic net modeling functions:
+```{r}
+source("BVS.R")
+source("ElasticNet.R")
+```
+
+Load the function that generates simulation data:
+```{r}
+source("data_gen.R")
+```
+
+Initialize:
+```{r}
+N = 50
+P = 50
+sparse = 0.2
+niter = 1000
+burn = 200
+sigma2_e_true = 1  
+alpha_true = c(0.5,-2)
+prior_sigma2e = list(g0=1,h0=1)
+prior_sigma2b = list(g1=1,h1=1)
+binary.A = F
+X.sd = 1
+
+Sigma2_b = c(0.2,seq(0.5,4,0.5))
+stats.summary = data.frame(matrix(nrow = length(Sigma2_b), ncol = 9))
+names(stats.summary) = c('sigma2_b','sparse','en.precision','en.recall','bvs.precision',
+                         'bvs.recall','bvs.inv_spec','bvs.pp0','bvs.pp1')
+rep = 30 # number of trials
+seed0 = 12345
+set.seed(seed0)
+seeds = sample(100000,size=rep)
+```
+
+Iterate over values of $\sigma^2_{\beta}$:
+```{r}
+for (s in 1:length(Sigma2_b)){
+
+  sigma2_b_true = Sigma2_b[s]
+  print(paste("True sigma2_b:",sigma2_b_true))
+  stats.summary$sigma2_b[s] = sigma2_b_true
+  
+  en = list(overlap = matrix(nrow = rep,ncol = 3))
+  bvs = list(overlap = matrix(nrow = rep,ncol = 3), means = matrix(nrow = rep,ncol = 4), 
+             pip = matrix(nrow = rep,ncol = 2))
+
+  for (i in 1:rep){
+    seed = seeds[i]
+    data = data.gen(N,P,peak.mean=NULL,peak.cov=NULL,X.sd,binary.A,sparse,alpha_true,sigma2_e_true,sigma2_b_true,seed)
+    X = data$X
+    y = data$y
+    A = data$A
+    beta_true = data$beta_true
+    en$overlap[i,] = EN.analysis(X,y,beta_true,seed)
+    stats = BVS(y,X,A,alpha_true,sigma2_e_true,sigma2_b_true,beta_true,prior_sigma2e,prior_sigma2b,niter,burn,seed)
+    bvs$overlap[i,] = stats$overlap
+    bvs$means[i,] = stats$means
+    bvs$pip[i,] = stats$pip
+  }
+  
+  stats.summary$sparse[s] = mean(bvs$overlap[,1])/P
+  print(paste("Averaged sparsity:",mean(bvs$overlap[,1])/P))
+  stats.summary$en.precision[s] = mean(en$overlap[,3]/en$overlap[,2])
+  stats.summary$en.recall[s] = mean(en$overlap[,3]/en$overlap[,1])
+  stats.summary$bvs.precision[s] = mean(bvs$overlap[,3]/bvs$overlap[,2])
+  stats.summary$bvs.recall[s] = mean(bvs$overlap[,3]/bvs$overlap[,1])
+  stats.summary$bvs.inv_spec[s] = mean((bvs$overlap[,2]-bvs$overlap[,3])/(P-bvs$overlap[,1]))
+  stats.summary$bvs.pp0[s] = mean(bvs$pip[,1])
+  stats.summary$bvs.pp1[s] = mean(bvs$pip[,2])
+}
+```
+
+## Result
+
+```{r}
+library('kableExtra')
+knitr::kable(stats.summary,"html") %>% kable_styling() %>% scroll_box(width="800px",height='400px')
+```
+(_sparsity_: averaged sparsity of the true models, _pp0_ and _pp1_: average posterior inclusion probabilities of the true zero $\beta_i$'s and true nonzero $\beta_i$'s.)
+
+```{r}
+plot(stats.summary$sigma2_b, stats.summary$bvs.precision, ylim = c(0,1), type = 'l',
+     xlab = 'sigma2_b', ylab = '', col = 'indianred1', main = 'BVS vs EN', 
+     cex.axis = 1.2)
+
+points(stats.summary$sigma2_b, stats.summary$bvs.precision, pch=19, col = 'indianred1')
+lines(stats.summary$sigma2_b, stats.summary$bvs.recall, type = 'l', col = 'indianred1')
+points(stats.summary$sigma2_b, stats.summary$bvs.recall, pch = 17, col = 'indianred1')
+
+lines(stats.summary$sigma2_b, stats.summary$en.precision, type = 'l',col='turquoise3')
+points(stats.summary$sigma2_b, stats.summary$en.precision,pch=19, col = 'turquoise3')
+lines(stats.summary$sigma2_b, stats.summary$en.recall, type = 'l',col='turquoise3')
+points(stats.summary$sigma2_b, stats.summary$en.recall, pch = 17, col='turquoise3')
+
+legend(x=2.8,y=0.3,legend = c('BVS precision','BVS recall','EN precision','EN recall'), 
+       col = c('indianred1','indianred1','turquoise3','turquoise3'),
+       pch = c(19,17,19,17), bty = "n")
+```
+
+
+

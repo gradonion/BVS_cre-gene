@@ -49,33 +49,41 @@ sample_sigma2_e = function(prior_sigma2e,y,beta,X){
   return(sigma2_e)
 }
 
+## EM for updating alpha (equivalent to logistic regression)
+llh.alpha = function(alpha,x,y){
+  return(-1*(alpha[1]*sum(y*x) + alpha[2]*sum(y) - sum(log(1+exp(alpha[1]*x+alpha[2])))))
+}
+
 ## Complete likelihood 
 LLH = function(y,X,A,alpha,sigma2_e,sigma2_b,beta,gamma){
   N = dim(X)[1]
   P = dim(X)[2]
   llh = -1 * (N/2*log(sigma2_e) +
-    sum((y-(beta%*%t(X))[1,])^2)/(2*sigma2_e) +
-    sum(gamma)*log(2*pi*sigma2_b)/2 +
-    sum(gamma*(beta^2/sigma2_b/2)) +
-    sum(gamma*log(1+exp(-alpha[1]*A-alpha[2]))+(1-gamma)*log(1+exp(alpha[1]*A+alpha[2]))) 
-    )
+                sum((y-(beta%*%t(X))[1,])^2)/(2*sigma2_e) +
+                sum(gamma)*log(2*pi*sigma2_b)/2 +
+                sum(gamma*(beta^2/sigma2_b/2)) +
+                sum(gamma*log(1+exp(-alpha[1]*A-alpha[2]))+(1-gamma)*log(1+exp(alpha[1]*A+alpha[2]))) 
+  )
   return(llh)
 }
 
-
-## EM for alpha (equivalent to logistic regression)
-llh.alpha = function(alpha,x,y){
-  return(-1*(alpha[1]*sum(y*x) + alpha[2]*sum(y) - sum(log(1+exp(alpha[1]*x+alpha[2])))))
-}
-
-## Metropolis-Hastings/EM for alpha
-# sample_alpha = functio(gamma,A){
-#   
-# }
-
-## Bayesian variable selction
-BVS = function(y,X,A,alpha_true,sigma2_e_true,sigma2_b_true,beta_true,prior_sigma2e,prior_sigma2b,niter,seed){
-  
+## Bayesian variable selction (BVS) implemented using Gibbs sampling:
+#' @param y,X,A,alpha_true input simulated data
+#' @param sigma2_e_true,sigma2_b_true,beta_true true parameters that generated the data
+#' @param prior_sigma2e,prior_sigma2b prior parameters on sigma2_b, sigma2_e in the bvs model
+#' @param niter number of total gibbs sampling steps
+#' @param burn number of burn-ins
+#' @param seed random seed set for the process
+#' @return means = c(LLH_true,LLH.mean,sigma2_b.mean,sigma2_e.mean)
+#' true likelihood, estimated mean of likelihood, sigma2_b, sigma2_e 
+#' @return overlap = overlap.stats
+#' number of nonzero betas the true/bvs model contains, and how many true_nonzeros bvs uncovered
+#' @return pip = c(pip0,pip1)
+#' mean posterior inclusion probabilities of true_zero and true_nonzero betas
+BVS = function(y,X,A,alpha_true,sigma2_e_true,sigma2_b_true,beta_true,prior_sigma2e,prior_sigma2b,niter,burn,seed){
+  require(pscl)
+  require(mvtnorm)
+  require(VennDiagram)
   set.seed(seed)
   N = dim(X)[1] 
   P = dim(X)[2]
@@ -99,6 +107,8 @@ BVS = function(y,X,A,alpha_true,sigma2_e_true,sigma2_b_true,beta_true,prior_sigm
   # alpha = c(0,0)
   # alpha_update[1,] = alpha
   LLH.total = rep(NA,niter)
+  
+  ## Gibbs iteration:
   iter = 1
   while (iter<niter) {
     old_beta = beta
@@ -118,12 +128,13 @@ BVS = function(y,X,A,alpha_true,sigma2_e_true,sigma2_b_true,beta_true,prior_sigm
     LLH.total[iter] = LLH(y,X,A,alpha_true,sigma2_e,sigma2_b,beta,gamma)
   }
   
+  ## Evaluation of convergence and estimation accuracy
   LLH_true = LLH(y,X,A,alpha_true,sigma2_e_true,sigma2_b_true,beta_true,gamma_true)
-  LLH.mean = mean(LLH.total[201:niter])
-  sigma2_b.mean = mean(Sigma2_b[201:niter])
-  sigma2_e.mean = mean(Sigma2_e[201:niter])
+  LLH.mean = mean(LLH.total[(burn+1):niter])
+  sigma2_b.mean = mean(Sigma2_b[(burn+1):niter])
+  sigma2_e.mean = mean(Sigma2_e[(burn+1):niter])
   
-  PIP.avg = colSums(Pgamma1_update[201:niter,])/(niter-200)
+  PIP.avg = colSums(Pgamma1_update[(burn+1):niter,])/(niter-burn)
   true.indx = (1:P)[beta_true!=0]
   avg_gamma.indx =(1:P)[PIP.avg>0.5]
   pip1 = mean(PIP.avg[(1:P)[beta_true!=0]])

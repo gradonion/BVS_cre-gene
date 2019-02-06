@@ -77,6 +77,9 @@ plot(stats.summary$sigma2_b, stats.summary$bvs.precision, ylim = c(0,1), type = 
      xlab = 'sigma2_b', ylab = '', col = 'indianred1', main = paste('X.sd',X.sd), 
      cex.axis = 1.2)
 
+plot(stats.summary$sigma2_b, stats.summary$bvs.precision, ylim = c(0,1), type = 'l',
+     xlab = 'sigma2_b', ylab = '', col = 'indianred1', main = 'BVS vs EN', 
+     cex.axis = 1.2)
 points(stats.summary$sigma2_b, stats.summary$bvs.precision, pch=19, col = 'indianred1')
 lines(stats.summary$sigma2_b, stats.summary$bvs.recall, type = 'l', col = 'indianred1')
 points(stats.summary$sigma2_b, stats.summary$bvs.recall, pch = 17, col = 'indianred1')
@@ -90,5 +93,5 @@ legend(x=2.5,y=0.3,legend = c('BVS precision','BVS recall','EN precision','EN re
        col = c('indianred1','indianred1','turquoise3','turquoise3'),
        pch = c(19,17,19,17), bty = "n")
 
-
+save(stats.summary,file = '../stats.summary.Rdata')
 

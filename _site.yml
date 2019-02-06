@@ -1,0 +1,20 @@
+name: BVS
+output_dir: "docs"
+include: [".nojekyll"]
+exclude: ["include"]
+navbar:
+  title: BVS
+  left:
+    - text: "Method description"
+      href: description.html
+    - text: "Example"
+      menu: 
+        - text: "Comparison btw BVS and EN"
+          href: vignette.html
+ 
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: textmate

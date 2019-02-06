@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+
+<meta name="author" content="Yifan Zhou" />
+
+
+<title>Bayesian variable selection with logistic prior inclusion probability</title>
+
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/flatly.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+<style type="text/css">
+/* padding for bootstrap navbar */
+body {
+  padding-top: 60px;
+  padding-bottom: 40px;
+}
+/* offset scroll position for anchor links (for fixed navbar)  */
+.section h1 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+
+.section h2 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+.section h3 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+.section h4 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+.section h5 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+.section h6 {
+  padding-top: 65px;
+  margin-top: -65px;
+}
+</style>
+
+<script>
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.parent().addClass('active');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+});
+</script>
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_').toLowerCase();
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+  padding-left: 25px;
+  text-indent: 0;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row-fluid">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">BVS</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="description.html">Method description</a>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+    Example
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="vignette.html">Comparison btw BVS and EN</a>
+    </li>
+  </ul>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">Bayesian variable selection with logistic prior inclusion probability</h1>
+<h4 class="author"><em>Yifan Zhou</em></h4>
+<h4 class="date"><em>12/1/2018</em></h4>
+
+</div>
+
+
+<p><span style="color:black; font-size:1.4em;">The goal of this project is to reconstruct cell-type specific gene regulatory networks using NGS data.</p>
+<div id="model-setup" class="section level2">
+<h2>Model setup</h2>
+<p>Suppose there are <em>P</em> enhancers (or ATAC-seq peaks) in the vicinity of a gene of interest <em>G</em>.<br />
+Let <span class="math inline">\(x_j\)</span> be chromatin accessibility of enhancer <em>j</em> and <span class="math inline">\(\beta_j\)</span> be its effect on gene <em>G</em>, let <em>y</em> be the expression or promoter activity of gene <em>G</em>. We have: <span class="math display">\[y=\sum_{j=1}^P \beta_j x_j + \epsilon , \hspace{5mm} \epsilon \sim N(0,\sigma^2_e)\]</span> where <span class="math inline">\(\beta_j \sim f(A_j)\)</span>, <span class="math inline">\(A_j\)</span> here are features in enhancer <em>j</em> (<em>e.g.</em> Hi-C contact with gene promoter, TF footprint strength, …).<br />
+One choice is a spike-and-slab prior on <span class="math inline">\(\beta_j\)</span> with logistic inclusion probability: <span class="math display">\[\beta_j \sim \pi_j N(0,\sigma^2_{\beta}) + (1-\pi_j)\delta_j , \hspace{5mm} \text{log }\frac{\pi_j}{1-\pi_j}=\alpha A_j\]</span> If we introduce <span class="math inline">\(\gamma_j\)</span> as a latent indicator variable that takes on the value 1 when <span class="math inline">\(\beta_j\)</span> is non-zero, and 0 when <span class="math inline">\(\beta_j\)</span> is zero, then the prior model is equivalent to: <span class="math display">\[\beta_j | \gamma_j=0 \sim \delta_0, \hspace{5mm}  \beta_j | \gamma_j=1 \sim N(0,\sigma^2_{\beta}), \]</span> <span class="math display">\[\text{and}  \hspace{5mm}  \text{log }\frac{p(\gamma_j=1)}{p(\gamma_j=0)}=\alpha A_j .\]</span> Suppose the sample size is <em>N</em>, the joint probability density function is: <span class="math display">\[
+\begin{align*}
+&amp;\text{P}(\boldsymbol y, \boldsymbol \beta, \boldsymbol\gamma, \alpha | \boldsymbol X, \boldsymbol A, \sigma^2_e, \sigma^2_{\beta} )\\ 
+&amp;= \prod_{i=1}^N \text{P}(y_i|X_{i\cdot},\boldsymbol \beta,\sigma^2_e) \prod_{j=1}^P \text{P}(\beta_j|\gamma_j,\sigma^2_{\beta}) \prod_{j=1}^P \text{P}(\gamma_j|\alpha,A_j)\\
+&amp;= \prod_{i=1}^N N(y_i;\sum_{j=1}^P \beta_j x_{ij},\sigma^2_e) \prod_{j=1}^P [N(\beta_j;0,\sigma^2_{\beta})^{\gamma_j } \delta_0(\beta_j)^{1-\gamma_j}] \prod_{j=1}^P (1+e^{-\alpha A_j})^{-\gamma_j}(1+e^{\alpha A_j})^{\gamma_j-1}
+\end{align*}
+\]</span></p>
+</div>
+<div id="gibbs-sampling-algorithm" class="section level2">
+<h2>Gibbs sampling algorithm</h2>
+<p>We sample each of the parameters based on their posterior distributions:</p>
+<ul>
+<li><p>Sample <span class="math inline">\(\boldsymbol \gamma, \boldsymbol \beta\)</span> given <span class="math inline">\(\boldsymbol y, \boldsymbol X, \alpha, \boldsymbol A, \sigma^2_e, \sigma^2_{\beta}\)</span> :<br />
+For <span class="math inline">\(j=1,2, ... ,P\)</span>:<br />
+First, sample <span class="math inline">\(\gamma_j\)</span> according to: <span class="math display">\[\frac{p(\gamma_j=1|\cdot)}{p(\gamma_j=0|\cdot)} =\sqrt{\frac{\lambda}{\sigma^2_{\beta}}} \text{ exp}\Bigl(\frac{\nu^2}{2\lambda}\Bigr) \text{ exp}(\alpha A_j).\]</span> Next, if <span class="math inline">\(\gamma_j=1\)</span>, sample <span class="math inline">\(\beta_j \sim N(\nu, \lambda)\)</span>; otherwise, <span class="math inline">\(\beta_j=0\)</span>.<br />
+Here, <span class="math inline">\(\nu = \lambda \cdot \frac{1}{\sigma^2_e} \sum_{i=1}^N x_{ij}(y_i-\sum_{k\neq j}x_{ik}\beta_k)\)</span>, <span class="math inline">\(\lambda = \Bigl(\frac{\sum_{i=1}^N x_{ij}^2}{\sigma^2_e}+\frac{1}{\sigma^2_{\beta}}\Bigr)^{-1}\)</span>.</p></li>
+<li><p>Sample <span class="math inline">\(\sigma^2_e\)</span></p></li>
+<li><p>Sample <span class="math inline">\(\sigma^2_{\beta}\)</span></p></li>
+<li><p>Update <span class="math inline">\(\alpha\)</span> using an EM-like approach:<br />
+Suppose that at step <span class="math inline">\((t)\)</span>, the posterior probability <span class="math inline">\(p(\gamma|\cdot)=q^{(t)}(\gamma)\)</span>, then <span class="math inline">\(\alpha^{(t)}\)</span> can be estimated as: <span class="math display">\[
+\begin{align*}
+\alpha^{(t)} &amp;= \underset{\alpha}{\text{argmax }} \mathbb{E}_{\gamma \sim q^{(t)}} \text{ log } p(\gamma|\alpha,A)\\
+&amp;= \underset{\alpha}{\text{argmax }} \mathbb{E}_{\gamma \sim q^{(t)}} \Bigl[ \sum_{j=1}^P -\gamma_j \text{ log}(1+e^{-\alpha_0-\alpha_1 A_j}) - (1-\gamma_j) \text{ log}(1+e^{\alpha_0+\alpha_1 A_j})\Bigr]\\
+&amp;= \underset{\alpha}{\text{argmax }} \sum_{j=1}^P \Bigl[q^{(t)}(\gamma_j=1)(\alpha_0+\alpha_1 A_j) - \text{log}(1+e^{\alpha_0+\alpha_1 A_j})\Bigr]
+\end{align*}
+\]</span></p></li>
+</ul>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

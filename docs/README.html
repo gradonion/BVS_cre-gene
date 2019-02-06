@@ -9,10 +9,9 @@
 <meta name="generator" content="pandoc" />
 
 
-<meta name="author" content="Yifan Zhou" />
 
 
-<title>Bayesian variable selection with logistic prior inclusion probability</title>
+<title></title>
 
 <script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -303,46 +302,12 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">Bayesian variable selection with logistic prior inclusion probability</h1>
-<h4 class="author"><em>Yifan Zhou</em></h4>
-<h4 class="date"><em>12/1/2018</em></h4>
 
 </div>
 
 
-<p><span style="color:black; font-size:1.4em;">The goal of this project is to reconstruct cell-type specific gene regulatory networks using NGS data.</p>
-<div id="model-setup" class="section level2">
-<h2>Model setup</h2>
-<p>Suppose there are <em>P</em> enhancers (or ATAC-seq peaks) in the vicinity of a gene of interest <em>G</em>.<br />
-Let <span class="math inline">\(x_j\)</span> be chromatin accessibility of enhancer <em>j</em> and <span class="math inline">\(\beta_j\)</span> be its effect on gene <em>G</em>, let <em>y</em> be the expression or promoter activity of gene <em>G</em>. We have: <span class="math display">\[y=\sum_{j=1}^P \beta_j x_j + \epsilon , \hspace{5mm} \epsilon \sim N(0,\sigma^2_e)\]</span> where <span class="math inline">\(\beta_j \sim f(A_j)\)</span>, <span class="math inline">\(A_j\)</span> here are features in enhancer <em>j</em> (<em>e.g.</em> Hi-C contact with gene promoter, TF footprint strength, …).<br />
-One choice is a spike-and-slab prior on <span class="math inline">\(\beta_j\)</span> with logistic inclusion probability: <span class="math display">\[\beta_j \sim \pi_j N(0,\sigma^2_{\beta}) + (1-\pi_j)\delta_j , \hspace{5mm} \text{log }\frac{\pi_j}{1-\pi_j}=\alpha A_j\]</span> If we introduce <span class="math inline">\(\gamma_j\)</span> as a latent indicator variable that takes on the value 1 when <span class="math inline">\(\beta_j\)</span> is non-zero, and 0 when <span class="math inline">\(\beta_j\)</span> is zero, then the prior model is equivalent to: <span class="math display">\[\beta_j | \gamma_j=0 \sim \delta_0, \hspace{5mm}  \beta_j | \gamma_j=1 \sim N(0,\sigma^2_{\beta}), \]</span> <span class="math display">\[\text{and}  \hspace{5mm}  \text{log }\frac{p(\gamma_j=1)}{p(\gamma_j=0)}=\alpha A_j .\]</span> Suppose the sample size is <em>N</em>, the joint probability density function is: <span class="math display">\[
-\begin{align*}
-&amp;\text{P}(\boldsymbol y, \boldsymbol \beta, \boldsymbol\gamma, \alpha | \boldsymbol X, \boldsymbol A, \sigma^2_e, \sigma^2_{\beta} )\\ 
-&amp;= \prod_{i=1}^N \text{P}(y_i|X_{i\cdot},\boldsymbol \beta,\sigma^2_e) \prod_{j=1}^P \text{P}(\beta_j|\gamma_j,\sigma^2_{\beta}) \prod_{j=1}^P \text{P}(\gamma_j|\alpha,A_j)\\
-&amp;= \prod_{i=1}^N N(y_i;\sum_{j=1}^P \beta_j x_{ij},\sigma^2_e) \prod_{j=1}^P [N(\beta_j;0,\sigma^2_{\beta})^{\gamma_j } \delta_0(\beta_j)^{1-\gamma_j}] \prod_{j=1}^P (1+e^{-\alpha A_j})^{-\gamma_j}(1+e^{\alpha A_j})^{\gamma_j-1}
-\end{align*}
-\]</span></p>
-</div>
-<div id="gibbs-sampling-algorithm" class="section level2">
-<h2>Gibbs sampling algorithm</h2>
-<p>We sample each of the parameters based on their posterior distributions:</p>
-<ul>
-<li><p>Sample <span class="math inline">\(\boldsymbol \gamma, \boldsymbol \beta\)</span> given <span class="math inline">\(\boldsymbol y, \boldsymbol X, \alpha, \boldsymbol A, \sigma^2_e, \sigma^2_{\beta}\)</span> :<br />
-For <span class="math inline">\(j=1,2, ... ,P\)</span>:<br />
-First, sample <span class="math inline">\(\gamma_j\)</span> according to: <span class="math display">\[\frac{p(\gamma_j=1|\cdot)}{p(\gamma_j=0|\cdot)} =\sqrt{\frac{\lambda}{\sigma^2_{\beta}}} \text{ exp}\Bigl(\frac{\nu^2}{2\lambda}\Bigr) \text{ exp}(\alpha A_j).\]</span> Next, if <span class="math inline">\(\gamma_j=1\)</span>, sample <span class="math inline">\(\beta_j \sim N(\nu, \lambda)\)</span>; otherwise, <span class="math inline">\(\beta_j=0\)</span>.<br />
-Here, <span class="math inline">\(\nu = \lambda \cdot \frac{1}{\sigma^2_e} \sum_{i=1}^N x_{ij}(y_i-\sum_{k\neq j}x_{ik}\beta_k)\)</span>, <span class="math inline">\(\lambda = \Bigl(\frac{\sum_{i=1}^N x_{ij}^2}{\sigma^2_e}+\frac{1}{\sigma^2_{\beta}}\Bigr)^{-1}\)</span>.</p></li>
-<li><p>Sample <span class="math inline">\(\sigma^2_e\)</span></p></li>
-<li><p>Sample <span class="math inline">\(\sigma^2_{\beta}\)</span></p></li>
-<li><p>Update <span class="math inline">\(\alpha\)</span> using an EM-like approach:<br />
-Suppose that at step <span class="math inline">\((t)\)</span>, the posterior probability <span class="math inline">\(p(\gamma|\cdot)=q^{(t)}(\gamma)\)</span>, then <span class="math inline">\(\alpha^{(t)}\)</span> can be estimated as: <span class="math display">\[
-\begin{align*}
-\alpha^{(t)} &amp;= \underset{\alpha}{\text{argmax }} \mathbb{E}_{\gamma \sim q^{(t)}} \text{ log } p(\gamma|\alpha,A)\\
-&amp;= \underset{\alpha}{\text{argmax }} \mathbb{E}_{\gamma \sim q^{(t)}} \Bigl[ \sum_{j=1}^P -\gamma_j \text{ log}(1+e^{-\alpha_0-\alpha_1 A_j}) - (1-\gamma_j) \text{ log}(1+e^{\alpha_0+\alpha_1 A_j})\Bigr]\\
-&amp;= \underset{\alpha}{\text{argmax }} \sum_{j=1}^P \Bigl[q^{(t)}(\gamma_j=1)(\alpha_0+\alpha_1 A_j) - \text{log}(1+e^{\alpha_0+\alpha_1 A_j})\Bigr]
-\end{align*}
-\]</span></p></li>
-</ul>
-</div>
+<p>This is a Bayesian variable selection method that models the relationship between the activity of cis-regulatory elements and target gene expression using the genomic features within the CREs as priors in determining whether they should be included.</p>
+<p>See <a href="https://gradonion.github.io/BVS_cre-gene/">this page</a> for details about the bvs model and the comparison in performance between bvs and elastic net.</p>
 
 
 

@@ -6,7 +6,7 @@ navbar:
   title: BVS
   left:
     - text: "Method description"
-      href: description.html
+      href: index.html
     - text: "Example"
       menu: 
         - text: "Comparison btw BVS and EN"

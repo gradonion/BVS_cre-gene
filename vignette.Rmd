@@ -10,7 +10,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(fig.width=6, fig.height=5, echo=TRUE, warning=FALSE, message=FALSE, comment = NA, fig.align = 'center')
+knitr::opts_chunk$set(fig.width=6, fig.height=6, echo=TRUE, warning=FALSE, message=FALSE, comment = NA, fig.align = 'center')
 ```
 
 Comparison was done between the BVS and EN method across a series of $\sigma^2_{\beta}$ values, which reflect the magnitude of non-zero $\beta$, or the signal level. The criteria include precison and recall rates averaged over a number of repeated trials.
@@ -22,18 +22,23 @@ library(mvtnorm)
 library(VennDiagram)
 ```
 
-Load BVS and Elastic net modeling functions:
+Load BVS functions, elastic net function, and the data generation function:
 ```{r eval=FALSE}
 source("code/BVS.R")
 source("code/ElasticNet.R")
-```
-
-Load the function that generates simulation data:
-```{r eval=FALSE}
 source("code/data_gen.R")
 ```
 
-Initialize:
+## Initialization
+Here, we randomly generate simluation data using the following steps:
+
+* generate $X_{N\times P}: X_{ij} \stackrel{i.i.d}{\sim} N(0,1)$;   
+* generate $A_{1\times P}$:  i) $A_j \stackrel{i.i.d}{\sim} NB(20,0.25)$,  ii) set the overall sparsity level to $0.2$,  iii) $A_j \leftarrow \text{log } (A_j+1)$;   
+* fix the enrichment parameters $\alpha_1=0.5$, $\alpha_0=-2$;   
+* sample $\gamma$ given $\alpha,A$;    
+* sample $\beta$ given $\sigma^2_{\beta}$ (varies from 0.2 to 4) and $\epsilon$ given $\sigma^2_e=1$;   
+* generate $y = X\beta + \epsilon$.
+
 ```{r eval=FALSE}
 N = 50
 P = 50
@@ -57,7 +62,7 @@ set.seed(seed0)
 seeds = sample(100000,size=rep)
 ```
 
-Iterate over values of $\sigma^2_{\beta}$:
+We iterated over values of $\sigma^2_{\beta}$ from 0.2 to 4. For each $\sigma^2_{\beta}$ value, we randomly generated 30 sets of data and run the both BVS and EN. For each BVS trial, 1000 Gibbs sampling steps were run, and a burn-in of 200 steps was used as the algorithm converges pretty fast.
 ```{r eval=FALSE}
 for (s in 1:length(Sigma2_b)){
 

@@ -333,12 +333,26 @@ div.tocify {
 <pre class="r"><code>library(pscl)
 library(mvtnorm)
 library(VennDiagram)</code></pre>
-<p>Load BVS and Elastic net modeling functions:</p>
+<p>Load BVS functions, elastic net function, and the data generation function:</p>
 <pre class="r"><code>source(&quot;code/BVS.R&quot;)
-source(&quot;code/ElasticNet.R&quot;)</code></pre>
-<p>Load the function that generates simulation data:</p>
-<pre class="r"><code>source(&quot;code/data_gen.R&quot;)</code></pre>
-<p>Initialize:</p>
+source(&quot;code/ElasticNet.R&quot;)
+source(&quot;code/data_gen.R&quot;)</code></pre>
+<div id="initialization" class="section level2">
+<h2>Initialization</h2>
+<p>Here, we randomly generate simluation data using the following steps:</p>
+<ul>
+<li>generate <span class="math inline">\(X_{N\times P}: X_{ij} \stackrel{i.i.d}{\sim} N(0,1)\)</span>;<br />
+</li>
+<li>generate <span class="math inline">\(A_{1\times P}\)</span>: i) <span class="math inline">\(A_j \stackrel{i.i.d}{\sim} NB(20,0.25)\)</span>, ii) set the overall sparsity level to <span class="math inline">\(0.2\)</span>, iii) <span class="math inline">\(A_j \leftarrow \text{log } (A_j+1)\)</span>;<br />
+</li>
+<li>fix the enrichment parameters <span class="math inline">\(\alpha_1=0.5\)</span>, <span class="math inline">\(\alpha_0=-2\)</span>;<br />
+</li>
+<li>sample <span class="math inline">\(\gamma\)</span> given <span class="math inline">\(\alpha,A\)</span>;<br />
+</li>
+<li>sample <span class="math inline">\(\beta\)</span> given <span class="math inline">\(\sigma^2_{\beta}\)</span> (varies from 0.2 to 4) and <span class="math inline">\(\epsilon\)</span> given <span class="math inline">\(\sigma^2_e=1\)</span>;<br />
+</li>
+<li>generate <span class="math inline">\(y = X\beta + \epsilon\)</span>.</li>
+</ul>
 <pre class="r"><code>N = 50
 P = 50
 sparse = 0.2
@@ -359,7 +373,7 @@ rep = 30 # number of trials
 seed0 = 12345
 set.seed(seed0)
 seeds = sample(100000,size=rep)</code></pre>
-<p>Iterate over values of <span class="math inline">\(\sigma^2_{\beta}\)</span>:</p>
+<p>We iterated over values of <span class="math inline">\(\sigma^2_{\beta}\)</span> from 0.2 to 4. For each <span class="math inline">\(\sigma^2_{\beta}\)</span> value, we randomly generated 30 sets of data and run the both BVS and EN. For each BVS trial, 1000 Gibbs sampling steps were run, and a burn-in of 200 steps was used as the algorithm converges pretty fast.</p>
 <pre class="r"><code>for (s in 1:length(Sigma2_b)){
 
   sigma2_b_true = Sigma2_b[s]
@@ -394,6 +408,7 @@ seeds = sample(100000,size=rep)</code></pre>
   stats.summary$bvs.pp0[s] = mean(bvs$pip[,1])
   stats.summary$bvs.pp1[s] = mean(bvs$pip[,2])
 }</code></pre>
+</div>
 <div id="result" class="section level2">
 <h2>Result</h2>
 <pre class="r"><code>library(&#39;kableExtra&#39;)
@@ -713,7 +728,7 @@ points(stats.summary$sigma2_b, stats.summary$en.recall, pch = 17, col=&#39;turqu
 legend(x=2.8,y=0.3,legend = c(&#39;BVS precision&#39;,&#39;BVS recall&#39;,&#39;EN precision&#39;,&#39;EN recall&#39;), 
        col = c(&#39;indianred1&#39;,&#39;indianred1&#39;,&#39;turquoise3&#39;,&#39;turquoise3&#39;),
        pch = c(19,17,19,17), bty = &quot;n&quot;)</code></pre>
-<p><img src="vignette_files/figure-html/unnamed-chunk-8-1.png" width="576" style="display: block; margin: auto;" /></p>
+<p><img src="vignette_files/figure-html/unnamed-chunk-7-1.png" width="576" style="display: block; margin: auto;" /></p>
 </div>
 
 

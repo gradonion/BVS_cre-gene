@@ -14,13 +14,16 @@ output:
 
 Suppose there are _P_ enhancers (or ATAC-seq peaks) in the vicinity of a gene of interest _G_.    
 Let $x_j$ be chromatin accessibility of enhancer _j_ and $\beta_j$ be its effect on gene _G_, let _y_ be the expression or promoter activity of gene _G_. We have:
-$$y=\sum_{j=1}^P \beta_j x_j + \epsilon , \hspace{5mm} \epsilon \sim N(0,\sigma^2_e)$$
-where $\beta_j \sim f(A_j)$, $A_j$ here are features in enhancer _j_ (_e.g._ Hi-C contact with gene promoter, TF footprint strength, ...).   
+$$y=\sum_{j=1}^P \beta_j x_j + \epsilon , \hspace{5mm} \epsilon \sim N(0,\sigma^2_e I_P)$$
+where $\beta_j \sim f(A_j)$, $A_j$ here are some genomic features in enhancer _j_ (_e.g._ Hi-C contact with gene promoter, TF footprint strength, ...).   
 One choice is a spike-and-slab prior on $\beta_j$ with logistic inclusion probability:
 $$\beta_j \sim \pi_j N(0,\sigma^2_{\beta}) + (1-\pi_j)\delta_j , \hspace{5mm} \text{log }\frac{\pi_j}{1-\pi_j}=\alpha A_j$$
+This means the genomic feature in enhancer _j_ is correlated with whether this enhancer is functional or not. The enrichment parameter $\alpha$ can be shared among all genes.
+
 If we introduce $\gamma_j$ as a latent indicator variable that takes on the value 1 when $\beta_j$ is non-zero, and 0 when $\beta_j$ is zero, then the prior model is equivalent to:
 $$\beta_j | \gamma_j=0 \sim \delta_0, \hspace{5mm}  \beta_j | \gamma_j=1 \sim N(0,\sigma^2_{\beta}), $$
 $$\text{and}  \hspace{5mm}  \text{log }\frac{p(\gamma_j=1)}{p(\gamma_j=0)}=\alpha A_j .$$
+
 Suppose the sample size is _N_, the joint probability density function is:
 $$
 \begin{align*}

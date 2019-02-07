@@ -8,7 +8,7 @@ output:
     toc_float: true
 ---
 
-<span style="color:black; font-size:1.4em;">The goal of this project is to reconstruct cell-type specific gene regulatory networks using NGS data.
+<span style="color:black; font-size:1.4em;">The goal is to model the relationship between cis-regulatory elements and their target genes from ATAC-seq and RNA-seq data.
 
 ## Model setup
 

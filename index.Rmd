@@ -18,7 +18,7 @@ $$y=\sum_{j=1}^P \beta_j x_j + \epsilon , \hspace{5mm} \epsilon \sim N(0,\sigma^
 where $\beta_j \sim f(A_j)$, $A_j$ here are some genomic features in enhancer _j_ (_e.g._ Hi-C contact with gene promoter, TF footprint strength, ...).   
 One choice is a spike-and-slab prior on $\beta_j$ with logistic inclusion probability:
 $$\beta_j \sim \pi_j N(0,\sigma^2_{\beta}) + (1-\pi_j)\delta_j , \hspace{5mm} \text{log }\frac{\pi_j}{1-\pi_j}=\alpha A_j$$
-This means the genomic feature in enhancer _j_ is correlated with whether this enhancer is functional or not. The enrichment parameter $\alpha$ can be shared among all genes.
+This is based on the assumption that the genomic feature in enhancer _j_ is correlated with whether this enhancer is functional or not. The enrichment parameter $\alpha$ can be shared among all genes.
 
 If we introduce $\gamma_j$ as a latent indicator variable that takes on the value 1 when $\beta_j$ is non-zero, and 0 when $\beta_j$ is zero, then the prior model is equivalent to:
 $$\beta_j | \gamma_j=0 \sim \delta_0, \hspace{5mm}  \beta_j | \gamma_j=1 \sim N(0,\sigma^2_{\beta}), $$
@@ -27,9 +27,10 @@ $$\text{and}  \hspace{5mm}  \text{log }\frac{p(\gamma_j=1)}{p(\gamma_j=0)}=\alph
 Suppose the sample size is _N_, the joint probability density function is:
 $$
 \begin{align*}
-&\text{P}(\boldsymbol y, \boldsymbol \beta, \boldsymbol\gamma, \alpha | \boldsymbol X, \boldsymbol A, \sigma^2_e, \sigma^2_{\beta} )\\ 
-&= \prod_{i=1}^N \text{P}(y_i|X_{i\cdot},\boldsymbol \beta,\sigma^2_e) \prod_{j=1}^P \text{P}(\beta_j|\gamma_j,\sigma^2_{\beta}) \prod_{j=1}^P \text{P}(\gamma_j|\alpha,A_j)\\
-&= \prod_{i=1}^N N(y_i;\sum_{j=1}^P \beta_j x_{ij},\sigma^2_e) \prod_{j=1}^P [N(\beta_j;0,\sigma^2_{\beta})^{\gamma_j } \delta_0(\beta_j)^{1-\gamma_j}] \prod_{j=1}^P (1+e^{-\alpha A_j})^{-\gamma_j}(1+e^{\alpha A_j})^{\gamma_j-1}
+&\text{P}(\boldsymbol y, \boldsymbol \beta, \boldsymbol\gamma, \alpha , \sigma^2_e, \sigma^2_{\beta} | \boldsymbol X, \boldsymbol A )\\ 
+&= \prod_{i=1}^N \text{P}(y_i|X_{i\cdot},\boldsymbol \beta,\sigma^2_e) \prod_{j=1}^P \text{P}(\beta_j|\gamma_j,\sigma^2_{\beta}) \prod_{j=1}^P \text{P}(\gamma_j|\alpha,A_j) \text{ P}(\sigma_e^2) \text{ P}(\sigma_{\beta}^2)\\
+&= \prod_{i=1}^N N(y_i;\sum_{j=1}^P \beta_j x_{ij},\sigma^2_e) \prod_{j=1}^P [N(\beta_j;0,\sigma^2_{\beta})^{\gamma_j } \delta_0(\beta_j)^{1-\gamma_j}] \prod_{j=1}^P (1+e^{-\alpha A_j})^{-\gamma_j}(1+e^{\alpha A_j})^{\gamma_j-1}\\
+&\cdot\text{ InverseGamma}(\sigma_e^2; g_0,h_0) \cdot \text{ InverseGamma}(\sigma_{\beta}^2; g_1,h_1)
 \end{align*}
 $$
 
@@ -45,9 +46,11 @@ Next, if $\gamma_j=1$, sample $\beta_j \sim N(\nu, \lambda)$; otherwise, $\beta_
 Here, $\nu = \lambda \cdot \frac{1}{\sigma^2_e} \sum_{i=1}^N x_{ij}(y_i-\sum_{k\neq j}x_{ik}\beta_k)$,
 $\lambda = \Bigl(\frac{\sum_{i=1}^N x_{ij}^2}{\sigma^2_e}+\frac{1}{\sigma^2_{\beta}}\Bigr)^{-1}$.
 
-* Sample $\sigma^2_e$
+* Sample $\sigma^2_e$ given $y,\beta,X$ :   
+$$p(\sigma^2_e|\cdot) \sim \text{InverseGamma}(g_0+\frac{N}{2},h_0+\frac{1}{2}\sum_{i=1}^N\epsilon_i^2)$$
 
-* Sample $\sigma^2_{\beta}$
+* Sample $\sigma^2_{\beta}$ given $y,\beta$ :   
+$$p(\sigma^2_{\beta}|\cdot) \sim \text{InverseGamma}(g_1+\frac{1}{2}\sum_{j=1}^P \gamma_j,h_1+\frac{1}{2}\sum_{j=1}^P \gamma_j\beta_j^2)$$
 
 * Update $\alpha$ using an EM-like approach:   
 Suppose that at step $(t)$, the posterior probability $p(\gamma|\cdot)=q^{(t)}(\gamma)$, then $\alpha^{(t)}$ can be estimated as:

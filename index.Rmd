@@ -1,5 +1,5 @@
 ---
-title: "Bayesian variable selection with logistic prior inclusion probability"
+title: "Bayesian variable selection regression with logistic prior inclusion probability"
 author: "Yifan Zhou"
 date: "12/1/2018"
 output: 
@@ -8,57 +8,78 @@ output:
     toc_float: true
 ---
 
-<span style="color:black; font-size:1.4em;">The goal is to model the relationship between cis-regulatory elements and their target genes from ATAC-seq and RNA-seq data.
+<style>
+h2 { /* Header 2 */
+  color: #2D4D56;
+}
+</style>
+
+<span style="color:dark grey; font-size:1.4em;">The goal is to model the relationship between cis-regulatory elements and their target genes from ATAC-seq and RNA-seq data.
+
+![](figs/Schematic.png)
+
+<br/>
+<br/>
 
 ## Model setup
 
-Suppose there are _P_ enhancers (or ATAC-seq peaks) in the vicinity of a gene of interest _G_.    
-Let $x_j$ be chromatin accessibility of enhancer _j_ (across $N$ samples) and $\beta_j$ be its effect on gene _G_, let _y_ be the expression or promoter activity of gene _G_ (across $N$ samples). We have:
-$$y=\sum_{j=1}^P \beta_j x_j + \epsilon , \hspace{5mm} \epsilon \sim N(0,\sigma^2_e I_N)$$
-where $\beta_j \sim f(A_j)$, $A_j$ here are some genomic features in enhancer _j_ (_e.g._ Hi-C contact with gene promoter, TF footprint strength, ...).   
-One choice is a spike-and-slab prior on $\beta_j$ with logistic inclusion probability:
-$$\beta_j \sim \pi_j N(0,\sigma^2_{\beta}) + (1-\pi_j)\delta_j , \hspace{5mm} \text{log }\frac{\pi_j}{1-\pi_j}=\alpha A_j$$
-This is based on the assumption that the genomic feature in enhancer _j_ is correlated with whether this enhancer is functional or not. The enrichment parameter $\alpha$ can be shared among all genes.
+Suppose we have a gene of interest _G_, and its expression (or promoter activity) across $N$ samples $\boldsymbol y$.
 
-If we introduce $\gamma_j$ as a latent indicator variable that takes on the value 1 when $\beta_j$ is non-zero, and 0 when $\beta_j$ is zero, then the prior model is equivalent to:
-$$\beta_j | \gamma_j=0 \sim \delta_0, \hspace{5mm}  \beta_j | \gamma_j=1 \sim N(0,\sigma^2_{\beta}), $$
-$$\text{and}  \hspace{5mm}  \text{log }\frac{p(\gamma_j=1)}{p(\gamma_j=0)}=\alpha A_j .$$
+We also have _P_ _cis_-regulatory elements (CREs) in the vicinity of gene _G_ that we consider as the candidate set of regulatory elements on the genome responsible for controlling the expression of _G_ in addition to its promoter. For example, these candidate CREs can be all the ATAC-seq peaks in the ~500 _bp_ region upstream of gene _G_.
+
+Let $\boldsymbol x_j$ be the level of chromatin accessibility (or ATAC-seq peak strength) at CRE _j_ across $N$ samples, and $\beta_j$ be the effect of CRE _j_ on gene _G_.
+
+Then we can describe the regulatory relationship between CREs and the target genes as a regression model:
+$$\boldsymbol y=\sum_{j=1}^P \beta_j \boldsymbol x_j + \boldsymbol \epsilon , \hspace{5mm} \boldsymbol \epsilon \sim N(0,\sigma^2_e I_N)$$
+Since for CREs with different genomic features, their regulatory effects will likely be different, we can incorporate this kind of information into the model by imposing a prior on $\boldsymbol \beta$:
+
+$\beta_j \sim f(\boldsymbol A_j)$, where $\boldsymbol A_j$ is some feature(s) in CRE _j_ (_e.g._ Hi-C contact with gene promoter, evidence of transcription factor binding, H3K27ac marks ...).
+
+One specific choice is a spike-and-slab prior on $\beta_j$ with logistic inclusion probability:
+$$\beta_j \sim \pi_j N(0,\sigma^2_{\beta}) + (1-\pi_j)\delta_j , \hspace{5mm} \text{log }\frac{\pi_j}{1-\pi_j}=\alpha_1 A_j + \alpha_0$$
+Here, the hyperparameter $\boldsymbol \alpha:=(\alpha_0,\alpha_1)$ characterizes the enrichment level of the genomic feature in active CREs in general, so it might be shared across all genes. (In the case where we need to incorporate multiple classes of CRE-specific genomic features into our model, it would be $\boldsymbol A_j=(A_{j1},...,A_{jm})$ and $\boldsymbol \alpha=(\alpha_0,...,\alpha_m)$.)
+
+If we introduce $\gamma_j$ as a latent indicator variable that takes on the value 1 when $\beta_j$ is non-zero, and 0 when $\beta_j$ is zero, then the prior on $\beta$ is equivalent to:
+$$\beta_j \big | \gamma_j=0 \sim \delta_0, \hspace{5mm}  \beta_j \big | \gamma_j=1 \sim N(0,\sigma^2_{\beta}), \hspace{5mm} \text{and}  \hspace{5mm}  \text{log }\frac{p(\gamma_j=1)}{p(\gamma_j=0)}=\alpha_1 A_j + \alpha_0$$
 
 If we specify inverse-gamma priors on the variances, the joint probability density function is:
 $$
 \begin{align*}
-&\text{P}(\boldsymbol y, \boldsymbol \beta, \boldsymbol\gamma, \alpha , \sigma^2_e, \sigma^2_{\beta} | \boldsymbol X, \boldsymbol A )\\ 
-&= \prod_{i=1}^N \text{P}(y_i|X_{i\cdot},\boldsymbol \beta,\sigma^2_e) \prod_{j=1}^P \text{P}(\beta_j|\gamma_j,\sigma^2_{\beta}) \prod_{j=1}^P \text{P}(\gamma_j|\alpha,A_j) \text{ P}(\sigma_e^2) \text{ P}(\sigma_{\beta}^2)\\
-&= \prod_{i=1}^N N(y_i;\sum_{j=1}^P \beta_j x_{ij},\sigma^2_e) \prod_{j=1}^P [N(\beta_j;0,\sigma^2_{\beta})^{\gamma_j } \delta_0(\beta_j)^{1-\gamma_j}] \prod_{j=1}^P (1+e^{-\alpha A_j})^{-\gamma_j}(1+e^{\alpha A_j})^{\gamma_j-1}\\
-&\cdot\text{ InverseGamma}(\sigma_e^2; g_0,h_0) \cdot \text{ InverseGamma}(\sigma_{\beta}^2; g_1,h_1)
+&\text{P}(\boldsymbol y, \boldsymbol \beta, \boldsymbol\gamma, \boldsymbol \alpha , \sigma^2_e, \sigma^2_{\beta} \big | \boldsymbol X, \boldsymbol A )\\ 
+&= \prod_{i=1}^N \text{P}(y_i \big |X_{i\cdot},\boldsymbol \beta,\sigma^2_e) \prod_{j=1}^P \text{P}(\beta_j \big |\gamma_j,\sigma^2_{\beta}) \prod_{j=1}^P \text{P}(\gamma_j \big |\alpha,A_j) \text{ P}(\sigma_e^2) \text{ P}(\sigma_{\beta}^2)\\
+&= \prod_{i=1}^N N(y_i;\sum_{j=1}^P \beta_j x_{ij},\sigma^2_e) \prod_{j=1}^P [N(\beta_j;0,\sigma^2_{\beta})^{\gamma_j } \delta_0(\beta_j)^{1-\gamma_j}] \prod_{j=1}^P (1+e^{-\alpha_1 A_j - \alpha_0})^{-\gamma_j}(1+e^{\alpha_1 A_j + \alpha_0})^{\gamma_j-1}\\
+&\cdot IG(\sigma_e^2; g_0,h_0) \cdot IG(\sigma_{\beta}^2; g_1,h_1)
 \end{align*}
 $$
 
-## Gibbs sampling algorithm
+<br/>
+<br/>
 
-We sample each of the parameters based on their posterior distributions:
+## Inference procedure
 
-* Sample $\boldsymbol \gamma, \boldsymbol \beta$ given $\boldsymbol y, \boldsymbol X, \alpha, \boldsymbol A, \sigma^2_e, \sigma^2_{\beta}$ :   
+We adopt an MCMC scheme to estimate the model parameters. We sample each of the parameters other than \boldsymbol $\alpha$ based on its posterior distribution and estimate \boldsymbol $\alpha$ using an EM-like approach, and iterate over these steps until convergence:
+
+* Sample $\boldsymbol \gamma, \boldsymbol \beta$ given $\boldsymbol y, \boldsymbol X, \boldsymbol \alpha, \boldsymbol A, \sigma^2_e, \sigma^2_{\beta}$ :   
 For $j=1,2, ... ,P$:    
 First, sample $\gamma_j$ according to: 
-$$\frac{p(\gamma_j=1|\cdot)}{p(\gamma_j=0|\cdot)} =\sqrt{\frac{\lambda}{\sigma^2_{\beta}}} \text{ exp}\Bigl(\frac{\nu^2}{2\lambda}\Bigr) \text{ exp}(\alpha A_j).$$
+$$\frac{p(\gamma_j=1|\cdot)}{p(\gamma_j=0|\cdot)} =\sqrt{\frac{\lambda}{\sigma^2_{\beta}}} \text{ exp}\Bigl(\frac{\nu^2}{2\lambda}\Bigr) \text{ exp}(\alpha_1 A_j + \alpha_0).$$
 Next, if $\gamma_j=1$, sample $\beta_j \sim N(\nu, \lambda)$; otherwise, $\beta_j=0$.   
 Here, $\nu = \lambda \cdot \frac{1}{\sigma^2_e} \sum_{i=1}^N x_{ij}(y_i-\sum_{k\neq j}x_{ik}\beta_k)$,
 $\lambda = \Bigl(\frac{\sum_{i=1}^N x_{ij}^2}{\sigma^2_e}+\frac{1}{\sigma^2_{\beta}}\Bigr)^{-1}$.
 
 * Sample $\sigma^2_e$ given $y,\beta,X$ :   
-$$p(\sigma^2_e|\cdot) \sim \text{InverseGamma}(g_0+\frac{N}{2},h_0+\frac{1}{2}\sum_{i=1}^N\epsilon_i^2)$$
+$$p(\sigma^2_e \big |\cdot) \sim \text{InverseGamma}(g_0+\frac{N}{2},h_0+\frac{1}{2}\sum_{i=1}^N\epsilon_i^2)$$
 
 * Sample $\sigma^2_{\beta}$ given $y,\beta$ :   
-$$p(\sigma^2_{\beta}|\cdot) \sim \text{InverseGamma}(g_1+\frac{1}{2}\sum_{j=1}^P \gamma_j,h_1+\frac{1}{2}\sum_{j=1}^P \gamma_j\beta_j^2)$$
+$$p(\sigma^2_{\beta} \big |\cdot) \sim \text{InverseGamma}(g_1+\frac{1}{2}\sum_{j=1}^P \gamma_j,h_1+\frac{1}{2}\sum_{j=1}^P \gamma_j\beta_j^2)$$
 
-* Update $\alpha$ using an EM-like approach:   
-Suppose that at step $(t)$, the posterior probability $p(\gamma|\cdot)=q^{(t)}(\gamma)$, then $\alpha^{(t)}$ can be estimated as:
+* Update $\boldsymbol \alpha$ using an EM-like approach:   
+Suppose that at step $(t)$, the posterior probability $p(\gamma|\cdot)=q^{(t)}(\gamma)$, then $\boldsymbol \alpha^{(t)}$ can be estimated by optimizing the expected log-likelihood:
 $$
 \begin{align*}
-\alpha^{(t)} &= \underset{\alpha}{\text{argmax }} \mathbb{E}_{\gamma \sim q^{(t)}} \text{ log } p(\gamma|\alpha,A)\\
-&= \underset{\alpha}{\text{argmax }} \mathbb{E}_{\gamma \sim q^{(t)}} \Bigl[ \sum_{j=1}^P -\gamma_j \text{ log}(1+e^{-\alpha_0-\alpha_1 A_j}) - (1-\gamma_j) \text{ log}(1+e^{\alpha_0+\alpha_1 A_j})\Bigr]\\
-&= \underset{\alpha}{\text{argmax }} \sum_{j=1}^P \Bigl[q^{(t)}(\gamma_j=1)(\alpha_0+\alpha_1 A_j) - \text{log}(1+e^{\alpha_0+\alpha_1 A_j})\Bigr]
+\boldsymbol \alpha^{(t)} &= \underset{\boldsymbol \alpha}{\text{argmax }} \mathbb{E}_{\gamma \sim q^{(t)}} \text{ log } p(\gamma \big |\boldsymbol \alpha,A)\\
+&= \underset{(\alpha_0,\alpha_1)}{\text{argmax }} \mathbb{E}_{\gamma \sim q^{(t)}} \Bigl[ \sum_{j=1}^P -\gamma_j \text{ log}(1+e^{-\alpha_0-\alpha_1 A_j}) - (1-\gamma_j) \text{ log}(1+e^{\alpha_0+\alpha_1 A_j})\Bigr]\\
+&= \underset{(\alpha_0,\alpha_1)}{\text{argmax }} \sum_{j=1}^P \Bigl[q^{(t)}(\gamma_j=1)(\alpha_0+\alpha_1 A_j) - \text{log}(1+e^{\alpha_0+\alpha_1 A_j})\Bigr]
 \end{align*}
 $$
 

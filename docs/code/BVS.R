@@ -133,7 +133,8 @@ BVS = function(y,X,A,alpha_true,sigma2_e_true,sigma2_b_true,beta_true,prior_sigm
   LLH.mean = mean(LLH.total[(burn+1):niter])
   sigma2_b.mean = mean(Sigma2_b[(burn+1):niter])
   sigma2_e.mean = mean(Sigma2_e[(burn+1):niter])
-  
+  beta.mean = colMeans(Beta_update[(burn+1):niter,])
+    
   PIP.avg = colSums(Pgamma1_update[(burn+1):niter,])/(niter-burn)
   true.indx = (1:P)[beta_true!=0]
   avg_gamma.indx =(1:P)[PIP.avg>0.5]
@@ -142,5 +143,5 @@ BVS = function(y,X,A,alpha_true,sigma2_e_true,sigma2_b_true,beta_true,prior_sigm
   overlap = calculate.overlap( x = list(true.indx,avg_gamma.indx))
   overlap.stats = as.numeric(sapply(overlap, length))
   
-  return(list(means = c(LLH_true,LLH.mean,sigma2_b.mean,sigma2_e.mean), overlap = overlap.stats, pip = c(pip0,pip1)))
+  return(list(beta.est = beta.mean, means = c(LLH_true,LLH.mean,sigma2_b.mean,sigma2_e.mean), overlap = overlap.stats, pip = c(pip0,pip1)))
 }

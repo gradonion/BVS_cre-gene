@@ -7,10 +7,12 @@ navbar:
   left:
     - text: "Method description"
       href: index.html
-    - text: "Example"
+    - text: "Examples"
       menu: 
-        - text: "Comparison btw BVS and EN"
-          href: vignette.html
+        - text: "BVS on simulated data"
+          href: bvs_simulated.html
+        - text: "Comparison btw BVS and Elastic Net"
+          href: comparison.html
  
 output:
   html_document:

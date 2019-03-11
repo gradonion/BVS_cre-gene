@@ -19,7 +19,6 @@ h2 { /* Header 2 */
 ![](figs/Schematic.png)
 
 <br/>
-<br/>
 
 ## Model setup
 
@@ -53,11 +52,10 @@ $$
 $$
 
 <br/>
-<br/>
 
 ## Inference procedure
 
-We adopt an MCMC scheme to estimate the model parameters. We sample each of the parameters other than \boldsymbol $\alpha$ based on its posterior distribution and estimate \boldsymbol $\alpha$ using an EM-like approach, and iterate over these steps until convergence:
+We adopt a Gibbs sampling scheme to estimate the model parameters. We sample each of the parameters other than \boldsymbol $\alpha$ based on its posterior distribution and estimate \boldsymbol $\alpha$ using an EM-like approach, and iterate over these steps until convergence:
 
 * Sample $\boldsymbol \gamma, \boldsymbol \beta$ given $\boldsymbol y, \boldsymbol X, \boldsymbol \alpha, \boldsymbol A, \sigma^2_e, \sigma^2_{\beta}$ :   
 For $j=1,2, ... ,P$:    

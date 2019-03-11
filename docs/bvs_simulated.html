@@ -9,9 +9,10 @@
 <meta name="generator" content="pandoc" />
 
 
+<meta name="author" content="Yifan Zhou" />
 
 
-<title></title>
+<title>BVS on simulated data</title>
 
 <script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -406,12 +407,103 @@ div.tocify {
 
 
 
+<h1 class="title toc-ignore">BVS on simulated data</h1>
+<h4 class="author"><em>Yifan Zhou</em></h4>
+<h4 class="date"><em>12/1/2018</em></h4>
 
 </div>
 
 
-<p>This is a Bayesian variable selection method that models the relationship between the activity of cis-regulatory elements and target gene expression using the genomic features within the CREs as priors in determining whether they should be included.</p>
-<p>See <a href="https://gradonion.github.io/BVS_cre-gene/">this page</a> for details about the bvs model and the comparison in performance between bvs and elastic net.</p>
+<style>
+h2 { /* Header 2 */
+  color: #2D4D56;
+}
+</style>
+<p>Load functions for data simulation and BVS regression:</p>
+<pre class="r"><code>source(&quot;code/data_gen.R&quot;)
+source(&quot;code/BVS.R&quot;)
+source(&quot;code/BVS_util.R&quot;)</code></pre>
+<div id="data-initialization" class="section level2">
+<h2>Data initialization</h2>
+<p>Here, we randomly generate simluation data by following these steps:</p>
+<ul>
+<li>generate <span class="math inline">\(X_{N\times P}: X_{ij} \stackrel{i.i.d}{\sim} N(0,1)\)</span>;<br />
+</li>
+<li>generate <span class="math inline">\(A_{1\times P}\)</span>: i) <span class="math inline">\(A_j \stackrel{i.i.d}{\sim} NB(20,0.25)\)</span>, ii) set the overall sparsity level to <span class="math inline">\(0.2\)</span>, iii) <span class="math inline">\(A_j \leftarrow \text{log } (A_j+1)\)</span>;<br />
+</li>
+<li>fix the enrichment parameters <span class="math inline">\(\alpha_1=0.5\)</span>, <span class="math inline">\(\alpha_0=-2\)</span>;<br />
+</li>
+<li>sample <span class="math inline">\(\gamma\)</span> given <span class="math inline">\(\alpha,A\)</span>;<br />
+</li>
+<li>sample <span class="math inline">\(\beta\)</span> given <span class="math inline">\(\gamma,\sigma^2_{\beta}=1\)</span> and <span class="math inline">\(\epsilon\)</span> given <span class="math inline">\(\sigma^2_e=1\)</span>;<br />
+</li>
+<li>generate <span class="math inline">\(y = X\beta + \epsilon\)</span>.</li>
+</ul>
+<pre class="r"><code>data = data.gen(N=100,P=100,X.sd=1,sparse=0.2,alpha_true=c(0.5,-2),sigma2_e_true=1,sigma2_b_true=1)
+X = data$X
+y = data$y
+A = data$A
+beta_true = data$beta_true</code></pre>
+<p>Here are all the true signals in the simulated data-set:</p>
+<pre class="r"><code>plot(beta_true, pch=16, xlab=&#39;covariate index&#39;, ylab=&#39;effect size&#39;)
+points((1:length(beta_true))[beta_true!=0],beta_true[beta_true!=0],col=&#39;red&#39;,pch=16)</code></pre>
+<p><img src="bvs_simulated_files/figure-html/unnamed-chunk-3-1.png" width="576" style="display: block; margin: auto;" /></p>
+<p><br/></p>
+</div>
+<div id="bvs-regression" class="section level2">
+<h2>BVS regression</h2>
+<pre class="r"><code>res = BVS(y=y,X=X,A=A,niter=1000,burn=200)</code></pre>
+<p>Examine the posterior inclusion probabilities of all covariates, and compare them with the true signals:</p>
+<pre class="r"><code>par(mfrow=c(1,2))
+BVS_plot.PIP(pip=res$PIP, beta_true=beta_true)
+BVS_plot.PIP(pip=res$PIP, beta_true=beta_true, thres_b=0.2)</code></pre>
+<p><img src="bvs_simulated_files/figure-html/unnamed-chunk-5-1.png" width="960" style="display: block; margin: auto;" /></p>
+<p>‘True signals’ (the red dots) are defined as covariates with non-zero effect sizes in the left plot, and covariates with absolute effect sizes &gt; 0.2 in the right plot.</p>
+<p>Calculate the average posterior inclusion probability over the true ‘non-signals’ vs the true signals:</p>
+<pre class="r"><code>res.stats = BVS_selection.stats(pip=res$PIP,beta_true=beta_true)
+res.stats$pp</code></pre>
+<pre><code>      pp0       pp1 
+0.0434326 0.6689489 </code></pre>
+<p>Calculate the precision and recall rates by comparing the true signals with the estimated ones:</p>
+<pre class="r"><code>res.stats$overlap</code></pre>
+<pre><code>     true signals estimated signals           overlap 
+               21                14                14 </code></pre>
+<pre class="r"><code>cat(paste(&#39;Precision of BVS estimation:&#39;,round(res.stats$overlap[3]/res.stats$overlap[2],digits = 2),&#39;\n&#39;))</code></pre>
+<pre><code>Precision of BVS estimation: 1 </code></pre>
+<pre class="r"><code>cat(paste(&#39;Recall of BVS estimation:&#39;,round(res.stats$overlap[3]/res.stats$overlap[1],digits = 2)))</code></pre>
+<pre><code>Recall of BVS estimation: 0.67</code></pre>
+<p><br/></p>
+</div>
+<div id="session-information" class="section level2">
+<h2>Session information</h2>
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 3.5.2 (2018-12-20)
+Platform: x86_64-apple-darwin15.6.0 (64-bit)
+Running under: macOS Mojave 10.14
+
+Matrix products: default
+BLAS: /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libRblas.0.dylib
+LAPACK: /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libRlapack.dylib
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+attached base packages:
+[1] grid      stats     graphics  grDevices utils     datasets  methods  
+[8] base     
+
+other attached packages:
+[1] VennDiagram_1.6.20  futile.logger_1.4.3 mvtnorm_1.0-8      
+[4] pscl_1.5.2         
+
+loaded via a namespace (and not attached):
+ [1] Rcpp_1.0.0           digest_0.6.18        MASS_7.3-51.1       
+ [4] futile.options_1.0.1 formatR_1.5          magrittr_1.5        
+ [7] evaluate_0.12        stringi_1.2.4        rmarkdown_1.11      
+[10] lambda.r_1.2.3       tools_3.5.2          stringr_1.3.1       
+[13] xfun_0.4             yaml_2.2.0           compiler_3.5.2      
+[16] htmltools_0.3.6      knitr_1.21          </code></pre>
+</div>
 
 
 

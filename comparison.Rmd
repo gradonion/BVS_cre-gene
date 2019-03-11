@@ -1,13 +1,19 @@
 ---
-title: "Compare the Bayesian variable selection (BVS) method with Elastic Net (EN)"
+title: "Comparison between the BVS method and Elastic Net (EN)"
 author: "Yifan Zhou"
 date: "12/1/2018"
 output: 
   html_document: 
     toc: true
     toc_float: true
-    code_folding: hide
+    code_folding: show
 ---
+
+<style>
+h2 { /* Header 2 */
+  color: #2D4D56;
+}
+</style>
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(fig.width=6, fig.height=6, echo=TRUE, warning=FALSE, message=FALSE, comment = NA, fig.align = 'center')
@@ -15,21 +21,16 @@ knitr::opts_chunk$set(fig.width=6, fig.height=6, echo=TRUE, warning=FALSE, messa
 
 Comparison was done between the BVS and EN method across a series of $\sigma^2_{\beta}$ values, which reflect the magnitude of non-zero $\beta$, or the signal level. The criteria include precison and recall rates averaged over a number of repeated trials.
 
-Load required packages:
+Load functions for data simulation, BVS regression and elastic net regression:
 ```{r eval=FALSE}
-library(pscl)
-library(mvtnorm)
-library(VennDiagram)
-```
-
-Load BVS functions, elastic net function, and the data generation function:
-```{r eval=FALSE}
-source("code/BVS.R")
-source("code/ElasticNet.R")
 source("code/data_gen.R")
+source("code/BVS.R")
+source("code/BVS_util.R")
+source("code/ElasticNet.R")
 ```
 
-## Initialization
+## Data initialization
+
 Here, we randomly generate simluation data using the following steps:
 
 * generate $X_{N\times P}: X_{ij} \stackrel{i.i.d}{\sim} N(0,1)$;   

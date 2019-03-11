@@ -12,7 +12,7 @@
 <meta name="author" content="Yifan Zhou" />
 
 
-<title>Compare the Bayesian variable selection (BVS) method with Elastic Net (EN)</title>
+<title>Comparison between the BVS method and Elastic Net (EN)</title>
 
 <script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -272,7 +272,7 @@ $(document).ready(function () {
 </style>
 <script>
 $(document).ready(function () {
-  window.initializeCodeFolding("hide" === "show");
+  window.initializeCodeFolding("show" === "show");
 });
 </script>
 
@@ -392,13 +392,16 @@ div.tocify {
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-    Example
+    Examples
      
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
-      <a href="vignette.html">Comparison btw BVS and EN</a>
+      <a href="bvs_simulated.html">BVS on simulated data</a>
+    </li>
+    <li>
+      <a href="comparison.html">Comparison btw BVS and Elastic Net</a>
     </li>
   </ul>
 </li>
@@ -422,24 +425,26 @@ div.tocify {
 
 
 
-<h1 class="title toc-ignore">Compare the Bayesian variable selection (BVS) method with Elastic Net (EN)</h1>
+<h1 class="title toc-ignore">Comparison between the BVS method and Elastic Net (EN)</h1>
 <h4 class="author"><em>Yifan Zhou</em></h4>
 <h4 class="date"><em>12/1/2018</em></h4>
 
 </div>
 
 
+<style>
+h2 { /* Header 2 */
+  color: #2D4D56;
+}
+</style>
 <p>Comparison was done between the BVS and EN method across a series of <span class="math inline">\(\sigma^2_{\beta}\)</span> values, which reflect the magnitude of non-zero <span class="math inline">\(\beta\)</span>, or the signal level. The criteria include precison and recall rates averaged over a number of repeated trials.</p>
-<p>Load required packages:</p>
-<pre class="r"><code>library(pscl)
-library(mvtnorm)
-library(VennDiagram)</code></pre>
-<p>Load BVS functions, elastic net function, and the data generation function:</p>
-<pre class="r"><code>source(&quot;code/BVS.R&quot;)
-source(&quot;code/ElasticNet.R&quot;)
-source(&quot;code/data_gen.R&quot;)</code></pre>
-<div id="initialization" class="section level2">
-<h2>Initialization</h2>
+<p>Load functions for data simulation, BVS regression and elastic net regression:</p>
+<pre class="r"><code>source(&quot;code/data_gen.R&quot;)
+source(&quot;code/BVS.R&quot;)
+source(&quot;code/BVS_util.R&quot;)
+source(&quot;code/ElasticNet.R&quot;)</code></pre>
+<div id="data-initialization" class="section level2">
+<h2>Data initialization</h2>
 <p>Here, we randomly generate simluation data using the following steps:</p>
 <ul>
 <li>generate <span class="math inline">\(X_{N\times P}: X_{ij} \stackrel{i.i.d}{\sim} N(0,1)\)</span>;<br />
@@ -829,7 +834,7 @@ points(stats.summary$sigma2_b, stats.summary$en.recall, pch = 17, col=&#39;turqu
 legend(x=2.8,y=0.3,legend = c(&#39;BVS precision&#39;,&#39;BVS recall&#39;,&#39;EN precision&#39;,&#39;EN recall&#39;), 
        col = c(&#39;indianred1&#39;,&#39;indianred1&#39;,&#39;turquoise3&#39;,&#39;turquoise3&#39;),
        pch = c(19,17,19,17), bty = &quot;n&quot;)</code></pre>
-<p><img src="vignette_files/figure-html/unnamed-chunk-7-1.png" width="576" style="display: block; margin: auto;" /></p>
+<p><img src="comparison_files/figure-html/unnamed-chunk-6-1.png" width="576" style="display: block; margin: auto;" /></p>
 </div>
 
 

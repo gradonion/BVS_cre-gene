@@ -1,8 +1,8 @@
 ## Function to generate simulation data:
-data.gen = function(N,P,peak.mean,peak.cov,X.sd,binary.A,sparse,alpha_true,sigma2_e_true,sigma2_b_true,seed){
+data.gen = function(N,P,peak.mean=NULL,peak.cov=NULL,X.sd=1,binary.A=FALSE,
+                    sparse=0.2,alpha_true,sigma2_e_true=1,sigma2_b_true=1,seed=12345){
   
   set.seed(seed)
-  
   if (binary.A == T){
     A = rep(0,P)
     A[sample(1:P,floor(P*sparse))] = 1
@@ -18,7 +18,7 @@ data.gen = function(N,P,peak.mean,peak.cov,X.sd,binary.A,sparse,alpha_true,sigma
   if (is.null(peak.cov)){
     X = matrix(rnorm(N*P,mean = 0,sd = X.sd), nrow = N, ncol = P) 
   } else {
-    # print('Using sample mean and covariance computed from real peak count data.')
+    print('Using sample mean and covariance computed from real peak count data.')
     X = t(rmvnorm(P,peak.mean,peak.cov))
     if (N != length(peak.mean)){
       print(paste('Adjusting sample mean and covariance to',N,'dimension...'))

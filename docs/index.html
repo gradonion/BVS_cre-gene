@@ -382,13 +382,16 @@ div.tocify {
 </li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
-    Example
+    Examples
      
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
-      <a href="vignette.html">Comparison btw BVS and EN</a>
+      <a href="bvs_simulated.html">BVS on simulated data</a>
+    </li>
+    <li>
+      <a href="comparison.html">Comparison btw BVS and Elastic Net</a>
     </li>
   </ul>
 </li>
@@ -421,7 +424,7 @@ h2 { /* Header 2 */
 <img src="figs/Schematic.png" />
 
 </div>
-<p><br/> <br/></p>
+<p><br/></p>
 <div id="model-setup" class="section level2">
 <h2>Model setup</h2>
 <p>Suppose we have a gene of interest <em>G</em>, and its expression (or promoter activity) across <span class="math inline">\(N\)</span> samples <span class="math inline">\(\boldsymbol y\)</span>.</p>
@@ -439,11 +442,11 @@ h2 { /* Header 2 */
 &amp;\cdot IG(\sigma_e^2; g_0,h_0) \cdot IG(\sigma_{\beta}^2; g_1,h_1)
 \end{align*}
 \]</span></p>
-<p><br/> <br/></p>
+<p><br/></p>
 </div>
 <div id="inference-procedure" class="section level2">
 <h2>Inference procedure</h2>
-<p>We adopt an MCMC scheme to estimate the model parameters. We sample each of the parameters other than <span class="math inline">\(\alpha\)</span> based on its posterior distribution and estimate <span class="math inline">\(\alpha\)</span> using an EM-like approach, and iterate over these steps until convergence:</p>
+<p>We adopt a Gibbs sampling scheme to estimate the model parameters. We sample each of the parameters other than <span class="math inline">\(\alpha\)</span> based on its posterior distribution and estimate <span class="math inline">\(\alpha\)</span> using an EM-like approach, and iterate over these steps until convergence:</p>
 <ul>
 <li><p>Sample <span class="math inline">\(\boldsymbol \gamma, \boldsymbol \beta\)</span> given <span class="math inline">\(\boldsymbol y, \boldsymbol X, \boldsymbol \alpha, \boldsymbol A, \sigma^2_e, \sigma^2_{\beta}\)</span> :<br />
 For <span class="math inline">\(j=1,2, ... ,P\)</span>:<br />

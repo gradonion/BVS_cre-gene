@@ -1,0 +1,90 @@
+---
+title: "BVS regression on simulated data"
+author: "Yifan Zhou"
+date: "12/1/2018"
+output: 
+  html_document: 
+    toc: true
+    toc_float: true
+---
+
+<style>
+h2 { /* Header 2 */
+  color: #2D4D56;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width=6, fig.height=5, echo=TRUE, warning=FALSE, message=FALSE, comment = NA, fig.align = 'center')
+```
+
+Load functions for data simulation and BVS regression:
+```{r}
+source("code/data_gen.R")
+source("code/BVS.R")
+source("code/BVS_util.R")
+```
+
+## Data initialization
+
+Here, we randomly generate simluation data by following these steps:
+
+* generate $X_{N\times P}: X_{ij} \stackrel{i.i.d}{\sim} N(0,1)$;   
+* generate $A_{1\times P}$:  i) $A_j \stackrel{i.i.d}{\sim} NB(20,0.25)$,  ii) set the overall sparsity level to $0.2$,  iii) $A_j \leftarrow \text{log } (A_j+1)$;   
+* fix the enrichment parameters $\alpha_1=0.5$, $\alpha_0=-2$;   
+* sample $\gamma$ given $\alpha,A$;    
+* sample $\beta$ given $\gamma,\sigma^2_{\beta}=1$ and $\epsilon$ given $\sigma^2_e=1$;   
+* generate $y = X\beta + \epsilon$.
+
+```{r}
+data = data.gen(N=100,P=100,X.sd=1,sparse=0.2,alpha_true=c(0.5,-2),sigma2_e_true=1,sigma2_b_true=1)
+X = data$X
+y = data$y
+A = data$A
+beta_true = data$beta_true
+```
+
+Here are all the true signals in the simulated data-set:
+```{r}
+plot(beta_true, pch=16, xlab='covariate index', ylab='effect size')
+points((1:length(beta_true))[beta_true!=0],beta_true[beta_true!=0],col='red',pch=16)
+```
+
+<br/>
+
+## BVS regression
+
+```{r}
+res = BVS(y=y,X=X,A=A,niter=1000,burn=200)
+```
+
+Examine the posterior inclusion probabilities of all covariates, and compare them with the true signals:
+
+```{r fig.width=10, fig.height=5}
+par(mfrow=c(1,2))
+BVS_plot.PIP(pip=res$PIP, beta_true=beta_true)
+BVS_plot.PIP(pip=res$PIP, beta_true=beta_true, thres_b=0.2)
+```
+
+'True signals' (the red dots) are defined as covariates with non-zero effect sizes in the left plot, and  covariates with absolute effect sizes > 0.2 in the right plot.
+
+Calculate the average posterior inclusion probability over the true 'non-signals' vs the true signals:
+```{r}
+res.stats = BVS_selection.stats(pip=res$PIP,beta_true=beta_true)
+res.stats$pp
+```
+
+Calculate the precision and recall rates by comparing the true signals with the estimated ones:
+```{r}
+res.stats$overlap
+cat(paste('Precision of BVS estimation:',round(res.stats$overlap[3]/res.stats$overlap[2],digits = 2),'\n'))
+cat(paste('Recall of BVS estimation:',round(res.stats$overlap[3]/res.stats$overlap[1],digits = 2)))
+```
+
+<br/>
+
+## Session information
+
+```{r}
+sessionInfo()
+```
